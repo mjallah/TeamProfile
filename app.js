@@ -6,7 +6,7 @@ const path = require("path");
 const fs = require("fs");
 
 const OUTPUT_DIR = path.resolve(__dirname, "output");
-const outputPath = path.join(OUTPUT_DIR, "team.html");
+const outputPath = path.join(__dirname, "team.html");
 
 const render = require("./lib/htmlRenderer");
 
@@ -14,63 +14,81 @@ const render = require("./lib/htmlRenderer");
 // Write code to use inquirer to gather information about the development team members,
 // and to create objects for each team member (using the correct classes as blueprints!)
 
-function generateTP() {
-    const userInput = inquirer.prompt([
-        {
-            type: "input",
-            message: "Manager Name",
-            name: "managerName"
-        },
-        {
-            type: "input",
-            message: "Manager's ID",
-            name: "managerId"
-        },
-        {
-            type: "input",
-            message: "Managers Email",
-            name: "managerEmail"
-        },
-        {
-            type: "input",
-            message: "Office Number",
-            name: "officeNumber"
-        },
+function generateTP(emp) {
+    let employees = emp || [];
+    inquirer.prompt([
         {
             type: "list",
             message: "Who do you want to add?",
             name: "role",
-            choices: ["Manager", "Engineer", "Intern"],
+            choices: ["Manager", "Engineer", "Intern", 'None'],
         },
-    ])
-    //   switch (userInput.role) {
-    //       case "Manager":
-    //           const officeNumber = inquirer.prompt([
-    //               {
-    //                   type: "input",
-    //                   message: "Office Number",
-    //                   name: "officeNumber"
-    //               },
-    //           ]);
-    //       case "Engineer":
-    //           const github = inquirer.prompt([
-    //               {
-    //                   type: "input",
-    //                   message: "GitHub Username",
-    //                   name: "github"
-    //               },
-    //           ])
-    //       case "Intern":
-    //           const school = inquirer.prompt([
-    //               {
-    //                   type: "input",
-    //                   message: "School",
-    //                    name: "school"
-    //               },
-    //           ])
-    //   }
-};
+        {
+            type: "input",
+            message: "Employee Name",
+            name: "employeeName",
+            when: (res) => res.role !== "None"
 
+        },
+        {
+            type: "input",
+            message: "Employee ID:",
+            name: "empId",
+            when: (res) => res.role !== "None"
+        },
+        {
+            type: "input",
+            message: "Managers Email",
+            name: "email",
+            when: (res) => res.role !== "None"
+        }, {
+            type: "input",
+            message: "Office Number",
+            name: "officeNumber",
+            when: (res) => res.role == "Manager"
+        },
+        {
+            type: "input",
+            message: "GitHub Username",
+            name: "github",
+            when: (res) => res.role == "Engineer"
+        },
+        {
+            type: "input",
+            message: "School",
+            name: "school",
+            when: (res) => res.role == "Intern"
+        },
+    ]).then(res => {
+        switch (res.role) {
+            case "Engineer":
+                employees.push(new Engineer(res.employeeName, res.empId, res.email, res.github))
+                generateTP(employees)
+                return
+            case "Manager":
+                employees.push(new Manager(res.employeeName, res.empId, res.email, res.officeNumber))
+                generateTP(employees)
+                break;
+            case "Intern":
+                employees.push(new Intern(res.employeeName, res.empId, res.email, res.school))
+                generateTP(employees)
+                break;
+            case "None":
+                if (employees.length) {
+                    fs.writeFile(outputPath, render(employees), "utf-8", () => {
+                        console.log(`I worte a file to ${outputPath}`)
+                    })
+                    return
+                }
+                console.log("No employees were given. No document writtn")
+                return
+            default:
+                return false
+        }
+    })
+
+};
+generateTP()
 // After the user has input all employees desired, call the `render` function (required
 // above) and pass in an array containing all employee objects; the `render` function will
 // generate and return a block of HTML including templated divs for each employee!
